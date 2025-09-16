@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  PHARMACY
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Appointments
+  appointmentsAsPatient Appointment[] @relation("PatientAppointments")
+  appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
+
+  // Prescriptions
+  prescriptionsAsDoctor   Prescription[] @relation("PrescriptionDoctor")
+  prescriptionsAsPatient  Prescription[] @relation("PrescriptionPatient")
+  prescriptionsAsPharmacy Prescription[] @relation("PrescriptionPharmacy")
+
+  // Medical Records
+  medicalRecordsAsPatient MedicalRecord[] @relation("MedicalRecordPatient")
+  medicalRecordsAsDoctor  MedicalRecord[] @relation("MedicalRecordDoctor")
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  date      DateTime
+  patientId String
+  doctorId  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  patient User @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor  User @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  prescriptions Prescription[]
+  medicalRecords MedicalRecord[]
+}
+
+model Prescription {
+  id            String   @id @default(uuid())
+  appointmentId String
+  doctorId      String
+  patientId     String
+  pharmacyId    String?
+  medication    String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  doctor      User @relation("PrescriptionDoctor", fields: [doctorId], references: [id])
+  patient     User @relation("PrescriptionPatient", fields: [patientId], references: [id])
+  pharmacy    User? @relation("PrescriptionPharmacy", fields: [pharmacyId], references: [id])
+}
+
+model MedicalRecord {
+  id        String   @id @default(uuid())
+  appointmentId String
+  patientId String
+  doctorId  String?
+  notes     String
+  createdAt DateTime @default(now())
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient User @relation("MedicalRecordPatient", fields: [patientId], references: [id])
+  doctor  User? @relation("MedicalRecordDoctor", fields: [doctorId], references: [id])
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
