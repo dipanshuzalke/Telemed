@@ -1,36 +1,43 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import prisma from "@/lib/prisma"; // <- we'll set this up in lib/prisma.ts
+import { hash } from "bcryptjs";
+import jwt from "jsonwebtoken";
+import prisma from "@/lib/prisma";
+
+const JWT_SECRET = process.env.JWT_SECRET || "supersecret"; // move to .env later
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role } = await req.json();
+    const { name, email, password } = await req.json();
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return NextResponse.json({ error: "User already exists" }, { status: 400 });
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ error: "Email already registered" }, { status: 400 });
+    }
 
-    // Create user
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-      },
+    const hashedPassword = await hash(password, 10);
+
+    const patient = await prisma.user.create({
+      data: { name, email, password: hashedPassword, role: "PATIENT" },
     });
 
-    return NextResponse.json(
-      { message: "User registered successfully", user: { id: newUser.id, email: newUser.email, role: newUser.role } },
-      { status: 201 }
+    // generate token
+    const token = jwt.sign(
+      { id: patient.id, email: patient.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
     );
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+
+    return NextResponse.json({
+      message: "Registration successful",
+      token,
+      patient: { id: patient.id, name: patient.name, email: patient.email },
+    });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -1,81 +1,92 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("DOCTOR");
-  const [error, setError] = useState("");
   const router = useRouter();
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleRegister(e: any) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role }),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      router.push("/auth/login");
-    } else {
-      setError(data.message || "Registration failed");
+      if (res.ok) {
+        // save token
+        localStorage.setItem("token", data.token);
+        // redirect
+        router.push("/patient/dashboard");
+      } else {
+        setError(data.error || "Registration failed");
+      }
+    } catch (err) {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <form
         onSubmit={handleRegister}
-        className="bg-white p-8 rounded-xl shadow-md w-96"
+        className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
+        <h2 className="text-2xl font-bold mb-6">Patient Register</h2>
+
         {error && <p className="text-red-500 mb-4">{error}</p>}
+
         <input
           type="text"
+          name="name"
           placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full mb-4 p-2 border rounded"
+          value={form.name}
+          onChange={handleChange}
+          className="w-full border p-2 mb-3 rounded"
           required
         />
+
         <input
           type="email"
+          name="email"
           placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-4 p-2 border rounded"
+          value={form.email}
+          onChange={handleChange}
+          className="w-full border p-2 mb-3 rounded"
           required
         />
+
         <input
           type="password"
+          name="password"
           placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-4 p-2 border rounded"
+          value={form.password}
+          onChange={handleChange}
+          className="w-full border p-2 mb-4 rounded"
           required
         />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="w-full mb-4 p-2 border rounded"
-        >
-          <option value="DOCTOR">Doctor</option>
-          <option value="PHARMACY">Pharmacy</option>
-          <option value="ADMIN">Admin</option>
-        </select>
+
         <button
           type="submit"
-          className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
         >
-          Register
+          {loading ? "Registering..." : "Register"}
         </button>
       </form>
     </div>

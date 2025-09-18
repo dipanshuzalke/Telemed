@@ -1,38 +1,34 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import prisma from "@/lib/prisma";
-
-const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey"; // Put in .env
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
+    // Check if user exists
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
+    // Verify password
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    // Create JWT
+    // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      JWT_SECRET,
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET!,
       { expiresIn: "1d" }
     );
 
-    return NextResponse.json({
-      message: "Login successful",
-      token,
-      user: { id: user.id, email: user.email, role: user.role }
-    });
-  } catch (error) {
-    console.error(error);
+    return NextResponse.json({ token, user }, { status: 200 });
+  } catch (err) {
+    console.error(err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

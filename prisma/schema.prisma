@@ -34,6 +34,8 @@ model User {
   appointmentsAsPatient Appointment[] @relation("PatientAppointments")
   appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
 
+  availabilities      Availability[] // 👈 NEW: doctor’s availability
+
   // Prescriptions
   prescriptionsAsDoctor   Prescription[] @relation("PrescriptionDoctor")
   prescriptionsAsPatient  Prescription[] @relation("PrescriptionPatient")
@@ -46,16 +48,29 @@ model User {
 
 model Appointment {
   id        String   @id @default(uuid())
-  date      DateTime
+  date      DateTime   // Date + Time together
+  status    String     @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
+  notes     String?    // (Optional: patient’s symptoms, doctor’s comments)
+
   patientId String
   doctorId  String
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
 
   // Relations
   patient User @relation("PatientAppointments", fields: [patientId], references: [id])
   doctor  User @relation("DoctorAppointments", fields: [doctorId], references: [id])
-  prescriptions Prescription[]
+  prescriptions  Prescription[]
   medicalRecords MedicalRecord[]
+}
+
+model Availability {
+  id        String   @id @default(uuid())
+  doctorId  String
+  doctor    User     @relation(fields: [doctorId], references: [id])
+  day       String   // e.g. "Monday"
+  startTime String   // "09:00"
+  endTime   String   // "12:00"
+  createdAt DateTime @default(now())
 }
 
 model Prescription {

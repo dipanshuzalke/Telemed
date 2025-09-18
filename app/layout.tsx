@@ -10,6 +10,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+       <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className="bg-gray-50 text-gray-900">
         <header className="bg-white shadow-md p-4 flex justify-between items-center">
           <h1 className="text-xl font-semibold">Telemed Dashboard</h1>
