@@ -1,32 +1,38 @@
-// pages/api/appointments/patient/[id].ts
-import type { NextApiRequest, NextApiResponse } from "next";
+// app/api/appointments/patient/[patientId]/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { authenticate, AuthenticatedUser } from "@/lib/auth";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { id } = req.query;
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { patientId: string } }
+) {
+  const user = await authenticate(req);
 
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+    // If not authenticated
+  if (user instanceof NextResponse) {
+    return user;
   }
 
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "Invalid patient ID" });
+  const authUser = user as AuthenticatedUser;
+
+  if (authUser.role !== "PATIENT" || authUser.id !== params.patientId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const appointments = await prisma.appointment.findMany({
-      where: { patientId: id },
-      include: {
-        doctor: {
-          select: { id: true, name: true},
-        },
-      },
-      orderBy: { date: "asc" },
+      where: { patientId: params.patientId },
+      include: { doctor: true },
+      orderBy: { date: "desc" },
     });
 
-    return res.status(200).json({ appointments });
+    return NextResponse.json({ appointments });
   } catch (error) {
-    console.error("Fetch patient appointments error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error fetching appointments:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch appointments" },
+      { status: 500 }
+    );
   }
 }

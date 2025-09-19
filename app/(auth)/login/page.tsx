@@ -25,13 +25,29 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-if (res.ok) {
-  localStorage.setItem("token", data.token); // ✅ should exist
-  router.push("/patient/dashboard");
-} else {
-  alert(data.error || "Login failed");
-}
+      if (res.ok) {
+        // ✅ Save token + role + id in localStorage
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.user.role);
+        localStorage.setItem("userId", data.user.id);
 
+        // ✅ Redirect based on role
+        switch (data.user.role) {
+          case "PATIENT":
+            router.push("/patient/dashboard");
+            break;
+          case "DOCTOR":
+            router.push("/doctor/dashboard");
+            break;
+          case "PHARMACY":
+            router.push("/pharmacy/dashboard");
+            break;
+          default:
+            alert("Unknown role. Please contact admin.");
+        }
+      } else {
+        alert(data.error || "Login failed");
+      }
     } catch (error) {
       console.error(error);
       alert("Something went wrong");
@@ -44,7 +60,9 @@ if (res.ok) {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold">Patient Login</CardTitle>
+          <CardTitle className="text-center text-2xl font-bold">
+            Login
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -62,7 +80,9 @@ if (res.ok) {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <Button type="submit" className="w-full">Login</Button>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Logging in..." : "Login"}
+            </Button>
           </form>
           <p className="text-sm text-center mt-4">
             Don’t have an account?{" "}

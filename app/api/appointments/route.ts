@@ -5,7 +5,11 @@ import { authenticate, AuthenticatedUser } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   const user = await authenticate(req);
 
-  if ("error" in user) return user; // not logged in
+    // If not authenticated
+  if (user instanceof NextResponse) {
+    return user;
+  }
+  
   const authUser = user as AuthenticatedUser;
 
   if (authUser.role !== "PATIENT") {

@@ -9,9 +9,12 @@ export async function fetchDoctors() {
 
 export async function fetchDoctorAvailability(doctorId: string) {
   const token = localStorage.getItem("token");
+
   const res = await fetch(`/api/availability?doctorId=${doctorId}`, {
+    method: "GET",
     headers: {
-      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // ✅ attach token
     },
   });
 
@@ -34,8 +37,14 @@ export async function bookAppointment(doctorId: string, date: string) {
 }
 
 export async function fetchPatientAppointments(patientId: string) {
-  const res = await fetch(`/api/appointments/patient/${patientId}`);
-  if (!res.ok) throw new Error("Failed to fetch appointments");
+  const res = await fetch(`/api/appointments/patient/${patientId}`, {
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch appointments");
+  }
+
   return res.json();
 }
 
